@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodePen عربي</title>
+<style>
+:root{--bg:#1e1e1e;--box:#2d2d2d;--border:#444;--text:#ddd;--glow:#47cf73;}
+*{box-sizing:border-box;font-family:'Cairo',sans-serif;}
+body{margin:0;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;}
+
+/* صفحة الدخول */
+.login-box{margin:auto;background:var(--box);padding:40px;border-radius:12px;border:1px solid var(--border);width:90%;max-width:400px;text-align:center;}
+.login-box h1{color:var(--glow);}
+.login-box input{width:90%;padding:12px;margin:8px 0;background:#111;border:1px solid var(--border);border-radius:6px;color:var(--text);}
+.login-box button{width:95%;padding:12px;background:var(--glow);color:#000;border:none;border-radius:6px;font-size:16px;font-weight:bold;cursor:pointer;}
+
+/* المحرر */
+.editor{display:none;flex-direction:column;height:100vh;}
+.topbar{background:#000;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--glow);}
+.topbar h2{color:var(--glow);margin:0;}
+.topbar button{background:var(--glow);color:#000;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:bold;margin:0 5px;}
+
+.container{display:flex;flex:1;overflow:hidden;}
+.pane{flex:1;display:flex;flex-direction:column;border-left:1px solid var(--border);}
+.pane-header{background:var(--box);padding:8px 12px;font-weight:bold;border-bottom:1px solid var(--border);}
+.pane textarea{flex:1;width:100%;background:#111;color:var(--text);border:none;padding:15px;font-family:'Consolas',monospace;font-size:14px;outline:none;resize:none;tab-size:2;}
+.preview{flex:1;background:#fff;border:none;width:100%;}
+#shareLink{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000;padding:10px 20px;border-radius:8px;border:2px solid var(--glow);display:none;z-index:999;}
+#shareLink input{background:transparent;border:none;color:var(--glow);width:300px;}
+</style>
+</head>
+<body>
+
+<!-- صفحة الدخول -->
+<div class="login-box" id="loginPage">
+  <h1>CodePen عربي</h1>
+  <p>سجل مرة واحدة</p>
+  <input type="email" id="email" placeholder="الايميل">
+  <input type="password" id="pass" placeholder="كلمة السر">
+  <button onclick="signup()">دخول</button>
+</div>
+
+<!-- المحرر -->
+<div class="editor" id="editorPage">
+  <div class="topbar">
+    <h2>محرر الكود</h2>
+    <div>
+      <button onclick="runCode()">▶️ تشغيل</button>
+      <button onclick="sharePen()">🔗 مشاركة</button>
+      <button onclick="savePen()">💾 حفظ</button>
+      <button onclick="logout()" style="background:#da3633;">خروج</button>
+    </div>
+  </div>
+  <div class="container">
+    <div class="pane">
+      <div class="pane-header">HTML</div>
+      <textarea id="htmlCode" placeholder="<h1>مرحبا</h1>"></textarea>
+    </div>
+    <div class="pane">
+      <div class="pane-header">CSS</div>
+      <textarea id="cssCode" placeholder="h1{color:red;}"></textarea>
+    </div>
+    <div class="pane">
+      <div class="pane-header">JS</div>
+      <textarea id="jsCode" placeholder="alert('مرحبا')"></textarea>
+    </div>
+  </div>
+  <iframe id="preview" class="preview"></iframe>
+  <div id="shareLink">
+    <input type="text" id="linkBox" readonly>
+    <button onclick="copyLink()">نسخ</button>
+  </div>
+</div>
+
+<script>
+// تحميل
+window.onload = function(){
+  const urlParams = new URLSearchParams(window.location.search);
+  const data = urlParams.get('data');
+  if(data){loadFromLink(data);return;}
+
+  if(localStorage.getItem("loggedIn")){
+    document.getElementById("loginPage").style.display = "none";
+    document.getElementById("editorPage").style.display = "flex";
+    loadPen();
+  }
+}
+
+function signup(){
+  if(document.getElementById('email').value && document.getElementById('pass').value){
+    localStorage.setItem("loggedIn","true");
+    location.reload();
+  }
+}
+
+// تشغيل الكود في المعاينة
+function runCode(){
+  let html = document.getElementById('htmlCode').value;
+  let css = `<style>${document.getElementById('cssCode').value}</style>`;
+  let js = `<script>${document.getElementById('jsCode').value}<\/script>`;
+  let iframe = document.getElementById('preview');
+  iframe.srcdoc = html + css + js;
+}
+
+// حفظ تلقائي
+function savePen(){
+  let data = {
+    html: document.getElementById('htmlCode').value,
+    css: document.getElementById('cssCode').value,
+    js: document.getElementById('jsCode').value
+  };
+  localStorage.setItem("pen", JSON.stringify(data));
+  alert("تم الحفظ ✅");
+}
+
+function loadPen(){
+  let data = JSON.parse(localStorage.getItem("pen")) || {};
+  document.getElementById('htmlCode').value = data.html || "";
+  document.getElementById('cssCode').value = data.css || "";
+  document.getElementById('jsCode').value = data.js || "";
+  runCode();
+}
+
+// مشاركة - يعمل رابط فيه الكود كله
+function sharePen(){
+  let data = {
+    html: document.getElementById('htmlCode').value,
+    css: document.getElementById('cssCode').value,
+    js: document.getElementById('jsCode').value
+  };
+  let encoded = btoa(JSON.stringify(data)); // تشفير
+  let link = window.location.origin + window.location.pathname + "?data=" + encoded;
+  document.getElementById('linkBox').value = link;
+  document.getElementById('shareLink').style.display = "block";
+}
+
+function copyLink(){
+  document.getElementById('linkBox').select();
+  document.execCommand('copy');
+  alert("تم نسخ الرابط");
+}
+
+// تحميل من الرابط
+function loadFromLink(encoded){
+  let data = JSON.parse(atob(encoded));
+  document.getElementById("loginPage").style.display = "none";
+  document.getElementById("editorPage").style.display = "flex";
+  document.getElementById('htmlCode').value = data.html;
+  document.getElementById('cssCode').value = data.css;
+  document.getElementById('jsCode').value = data.js;
+  runCode();
+  // اخفي الازرار عشان تبقى معاينة بس
+  document.querySelector('.topbar div').innerHTML = '<h2>معاينة فقط</h2>';
+}
+
+function logout(){
+  localStorage.clear();
+  location.reload();
+}
+
+// تشغيل تلقائي وانت بتكتب
+document.querySelectorAll('textarea').forEach(t=>t.addEventListener('keyup', runCode));
+</script>
+</body>
+  </html>
